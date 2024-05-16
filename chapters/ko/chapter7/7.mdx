@@ -1,6 +1,6 @@
 <FrameworkSwitchCourse {fw} />
 
-# Question answering[[question-answering]]
+# 질의 응답[[question-answering]]
 
 {#if fw === 'pt'}
 
@@ -22,29 +22,31 @@
 
 {/if}
 
-Time to look at question answering! This task comes in many flavors, but the one we'll focus on in this section is called *extractive* question answering. This involves posing questions about a document and identifying the answers as _spans of text_ in the document itself.
+질의응답을 살펴보는 시간! 이 작업은 다양한 형태로 제공되지만 이 섹션에서 집중적으로 다룰 작업은 *추출적* 질문 답변이라고 합니다. 여기에는 문서에 대한 질문을 제기하고 문서 자체의 _텍스트 범위_에 대한 답변을 식별하는 것이 포함됩니다.
 
 <Youtube id="ajPx5LwJD-I"/>
 
-We will fine-tune a BERT model on the [SQuAD dataset](https://rajpurkar.github.io/SQuAD-explorer/), which consists of questions posed by crowdworkers on a set of Wikipedia articles. This will give us a model able to compute predictions like this one:
+우리는 Wikipedia 기사 세트에 대해 크라우드 작업자가 제기한 질문으로 구성된 [SQuAD 데이터세트](https://rajpurkar.github.io/SQuAD-explorer/)에서 BERT 모델을 미세 조정할 것입니다. 그러면 다음과 같은 예측을 계산할 수 있는 모델이 제공됩니다.
 
 <iframe src="https://course-demos-bert-finetuned-squad.hf.space" frameBorder="0" height="450" title="Gradio app" class="block dark:hidden container p-0 flex-grow space-iframe" allow="accelerometer; ambient-light-sensor; autoplay; battery; camera; document-domain; encrypted-media; fullscreen; geolocation; gyroscope; layout-animations; legacy-image-formats; magnetometer; microphone; midi; oversized-images; payment; picture-in-picture; publickey-credentials-get; sync-xhr; usb; vr ; wake-lock; xr-spatial-tracking" sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-downloads"></iframe>
 
-This is actually showcasing the model that was trained and uploaded to the Hub using the code shown in this section. You can find it and double-check the predictions [here](https://huggingface.co/huggingface-course/bert-finetuned-squad?context=%F0%9F%A4%97+Transformers+is+backed+by+the+three+most+popular+deep+learning+libraries+%E2%80%94+Jax%2C+PyTorch+and+TensorFlow+%E2%80%94+with+a+seamless+integration+between+them.+It%27s+straightforward+to+train+your+models+with+one+before+loading+them+for+inference+with+the+other.&question=Which+deep+learning+libraries+back+%F0%9F%A4%97+Transformers%3F).
+
+이는 실제로 이 섹션에 표시된 코드를 사용하여 훈련되고 허브에 업로드된 모델을 보여줍니다. [여기](https://huggingface.co/huggingface-course/bert-finetuned-squad?context=%F0%9F%A4%97+Transformers+is+backed+by+the+three+most+popular+deep+learning+libraries+%E2%80%94+Jax%2C+PyTorch+and+TensorFlow+%E2%80%94+with+a+seamless+integration+between+them.+It%27s+straightforward+to+train+your+models+with+one+before+loading+them+for+inference+with+the+other.&question=Which+deep+learning+libraries+back+%F0%9F%A4%97+Transformers%3F)에서 찾아보고 예측을 다시 확인할 수 있습니다.
+
 
 <Tip>
 
-💡 Encoder-only models like BERT tend to be great at extracting answers to factoid questions like "Who invented the Transformer architecture?" but fare poorly when given open-ended questions like "Why is the sky blue?" In these more challenging cases, encoder-decoder models like T5 and BART are typically used to synthesize the information in a way that's quite similar to [text summarization](/course/chapter7/5). If you're interested in this type of *generative* question answering, we recommend checking out our [demo](https://yjernite.github.io/lfqa.html) based on the [ELI5 dataset](https://huggingface.co/datasets/eli5).
+💡 BERT와 같은 인코더 전용 모델은 "Transformer 아키텍처를 발명한 사람은 누구입니까?"와 같은 사실적인 질문에 대한 답변을 추출하는 데 탁월한 경향이 있습니다. 하지만 "하늘은 왜 파란색인가요?"와 같은 개방형 질문을 받으면 결과가 좋지 않습니다. 이러한 보다 까다로운 경우에는 일반적으로 T5 및 BART와 같은 인코더-디코더 모델을 사용하여 [텍스트 요약](/course/chapter7/5)과 매우 유사한 방식으로 정보를 합성합니다. 이러한 유형의 *생성적* 질문 답변에 관심이 있다면 [ELI5 데이터 세트](https://huggingface.co/datasets/eli5)를 기반으로 한 [데모](https://yjernite.github.io/lfqa.html)를 확인해보시길 바랍니다.
 
 </Tip>
 
-## Preparing the data[[preparing-the-data]]
+## 데이터 준비[[preparing-the-data]]
 
-The dataset that is used the most as an academic benchmark for extractive question answering is [SQuAD](https://rajpurkar.github.io/SQuAD-explorer/), so that's the one we'll use here. There is also a harder [SQuAD v2](https://huggingface.co/datasets/squad_v2) benchmark, which includes questions that don't have an answer. As long as your own dataset contains a column for contexts, a column for questions, and a column for answers, you should be able to adapt the steps below.
+추출적 질문 답변을 위한 학문적 벤치마크로 가장 많이 사용되는 데이터세트는 [SQuAD](https://rajpurkar.github.io/SQuAD-explorer/)이므로 여기서는 이를 사용하겠습니다. 답변이 없는 질문을 포함하는 더 어려운 [SQuAD v2](https://huggingface.co/datasets/squad_v2) 벤치마크도 있습니다. 자신의 데이터세트에 컨텍스트 열, 질문 열, 답변 열이 포함되어 있는 한 아래 단계를 조정할 수 있습니다.
 
-### The SQuAD dataset[[the-squad-dataset]]
+### SQuAD 데이터세트[[the-squad-dataset]]
 
-As usual, we can download and cache the dataset in just one step thanks to `load_dataset()`:
+평소와 같이 `load_dataset()` 덕분에 단 한 단계로 데이터 세트를 다운로드하고 캐시할 수 있습니다.
 
 ```py
 from datasets import load_dataset
@@ -52,7 +54,7 @@ from datasets import load_dataset
 raw_datasets = load_dataset("squad")
 ```
 
-We can then have a look at this object to learn more about the SQuAD dataset:
+그런 다음 이 개체를 살펴보고 SQuAD 데이터 세트에 대해 자세히 알아볼 수 있습니다.
 
 ```py
 raw_datasets
@@ -71,7 +73,7 @@ DatasetDict({
 })
 ```
 
-It looks like we have everything we need with the `context`, `question`, and `answers` fields, so let's print those for the first element of our training set:
+`context`, `question`, `answers` 필드에 필요한 모든 것이 있는 것처럼 보이므로 훈련 세트의 첫 번째 요소에 대해 이를 인쇄해 보겠습니다.
 
 ```py
 print("Context: ", raw_datasets["train"][0]["context"])
@@ -85,9 +87,9 @@ Question: 'To whom did the Virgin Mary allegedly appear in 1858 in Lourdes Franc
 Answer: {'text': ['Saint Bernadette Soubirous'], 'answer_start': [515]}
 ```
 
-The `context` and `question` fields are very straightforward to use. The `answers` field is a bit trickier as it comports a dictionary with two fields that are both lists. This is the format that will be expected by the `squad` metric during evaluation; if you are using your own data, you don't necessarily need to worry about putting the answers in the same format. The `text` field is rather obvious, and the `answer_start` field contains the starting character index of each answer in the context.
+`context` 및 `question` 필드는 사용이 매우 간단합니다. `answers` 필드는 두 필드가 모두 목록인 사전을 제공하므로 조금 더 까다롭습니다. 이는 평가 중 '스쿼드' 측정항목에서 예상되는 형식입니다. 자신의 데이터를 사용하는 경우 답변을 동일한 형식으로 입력하는 것에 대해 걱정할 필요가 없습니다. `text` 필드는 다소 명확하며 `answer_start` 필드에는 컨텍스트에서 각 답변의 시작 문자 인덱스가 포함됩니다.
 
-During training, there is only one possible answer. We can double-check this by using the `Dataset.filter()` method:
+훈련 중에는 가능한 답이 하나뿐입니다. `Dataset.filter()` 메서드를 사용하여 이를 다시 확인할 수 있습니다.
 
 ```py
 raw_datasets["train"].filter(lambda x: len(x["answers"]["text"]) != 1)
@@ -100,7 +102,7 @@ Dataset({
 })
 ```
 
-For evaluation, however, there are several possible answers for each sample, which may be the same or different:
+그러나 평가를 위해 각 샘플에 대해 여러 가지 가능한 답변이 있으며 이는 동일하거나 다를 수 있습니다.
 
 ```py
 print(raw_datasets["validation"][0]["answers"])
@@ -112,7 +114,7 @@ print(raw_datasets["validation"][2]["answers"])
 {'text': ['Santa Clara, California', "Levi's Stadium", "Levi's Stadium in the San Francisco Bay Area at Santa Clara, California."], 'answer_start': [403, 355, 355]}
 ```
 
-We won't dive into the evaluation script as it will all be wrapped up by a 🤗 Datasets metric for us, but the short version is that some of the questions have several possible answers, and this script will compare a predicted answer to all the acceptable answers and take the best score. If we take a look at the sample at index 2, for instance:
+평가 스크립트는 모두 🤗 데이터 세트 측정항목으로 마무리되므로 자세히 다루지 않겠습니다. 하지만 간략하게 설명하면 일부 질문에는 여러 가지 가능한 답변이 있으며 이 스크립트는 예측된 답변을 모든 질문과 비교합니다. 허용되는 답변을 선택하고 최고 점수를 받으세요. 예를 들어 인덱스 2의 샘플을 살펴보면 다음과 같습니다.
 
 ```py
 print(raw_datasets["validation"][2]["context"])
@@ -124,15 +126,15 @@ print(raw_datasets["validation"][2]["question"])
 'Where did Super Bowl 50 take place?'
 ```
 
-we can see that the answer can indeed be one of the three possibilities we saw before.
+우리는 그 대답이 실제로 이전에 본 세 가지 가능성 중 하나일 수 있음을 알 수 있습니다.
 
-### Processing the training data[[processing-the-training-data]]
+### 학습 데이터 처리[[processing-the-training-data]]
 
 <Youtube id="qgaM0weJHpA"/>
 
-Let's start with preprocessing the training data. The hard part will be to generate labels for the question's answer, which will be the start and end positions of the tokens corresponding to the answer inside the context.
+훈련 데이터 전처리부터 시작해 보겠습니다. 어려운 부분은 질문 답변에 대한 레이블을 생성하는 것입니다. 이는 컨텍스트 내 답변에 해당하는 토큰의 시작 및 끝 위치가 됩니다.
 
-But let's not get ahead of ourselves. First, we need to convert the text in the input into IDs the model can make sense of, using a tokenizer:
+하지만 너무 앞서가지 말자. 먼저 토크나이저를 사용하여 입력의 텍스트를 모델이 이해할 수 있는 ID로 변환해야 합니다.
 
 ```py
 from transformers import AutoTokenizer
@@ -141,7 +143,7 @@ model_checkpoint = "bert-base-cased"
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 ```
 
-As mentioned previously, we'll be fine-tuning a BERT model, but you can use any other model type as long as it has a fast tokenizer implemented. You can see all the architectures that come with a fast version in [this big table](https://huggingface.co/transformers/#supported-frameworks), and to check that the `tokenizer` object you're using is indeed backed by 🤗 Tokenizers you can look at its `is_fast` attribute:
+이전에 언급했듯이 BERT 모델을 미세 조정할 예정이지만 빠른 토크나이저가 구현되어 있는 한 다른 모델 유형을 사용할 수 있습니다. [이 큰 테이블](https://huggingface.co/transformers/#supported-frameworks)에서 빠른 버전과 함께 제공되는 모든 아키텍처를 볼 수 있으며, 사용 중인 `tokenizer` 객체가 실제로 🤗 토크나이저의 지원을 받아 `is_fast` 속성을 볼 수 있습니다:
 
 ```py
 tokenizer.is_fast
@@ -151,13 +153,13 @@ tokenizer.is_fast
 True
 ```
 
-We can pass to our tokenizer the question and the context together, and it will properly insert the special tokens to form a sentence like this:
+토크나이저에 질문과 컨텍스트를 함께 전달할 수 있으며 특수 토큰을 적절하게 삽입하여 다음과 같은 문장을 구성합니다.
 
 ```
 [CLS] question [SEP] context [SEP]
 ```
 
-Let's double-check:
+다시 확인해 봅시다:
 
 ```py
 context = raw_datasets["train"][0]["context"]
@@ -178,21 +180,21 @@ tokenizer.decode(inputs["input_ids"])
 'and the Gold Dome ), is a simple, modern stone statue of Mary. [SEP]'
 ```
 
-The labels will then be the index of the tokens starting and ending the answer, and the model will be tasked to predicted one start and end logit per token in the input, with the theoretical labels being as follow:
+그런 다음 레이블은 답변을 시작하고 끝내는 토큰의 인덱스가 되며, 모델은 입력에서 토큰당 하나의 시작 및 끝 로짓을 예측하도록 작업을 수행하며 이론적 레이블은 다음과 같습니다.
 
 <div class="flex justify-center">
 <img class="block dark:hidden" src="https://huggingface.co/datasets/huggingface-course/documentation-images/resolve/main/en/chapter7/qa_labels.svg" alt="One-hot encoded labels for question answering."/>
 <img class="hidden dark:block" src="https://huggingface.co/datasets/huggingface-course/documentation-images/resolve/main/en/chapter7/qa_labels-dark.svg" alt="One-hot encoded labels for question answering."/>
 </div>
 
-In this case the context is not too long, but some of the examples in the dataset have very long contexts that will exceed the maximum length we set (which is 384 in this case). As we saw in [Chapter 6](/course/chapter6/4) when we explored the internals of the `question-answering` pipeline, we will deal with long contexts by creating several training features from one sample of our dataset, with a sliding window between them.
+이 경우 컨텍스트는 너무 길지 않지만 데이터 세트의 일부 예에는 우리가 설정한 최대 길이(이 경우 384)를 초과하는 매우 긴 컨텍스트가 있습니다. [6장](/course/chapter6/4)에서 '질문-답변' 파이프라인의 내부를 탐색했을 때 본 것처럼 데이터 세트의 한 샘플에서 여러 훈련 기능을 생성하여 긴 컨텍스트를 처리합니다. 그 사이의 슬라이딩 창.
 
-To see how this works using the current example, we can limit the length to 100 and use a sliding window of 50 tokens. As a reminder, we use:
+현재 예제를 사용하여 이것이 어떻게 작동하는지 확인하기 위해 길이를 100으로 제한하고 50개 토큰의 슬라이딩 창을 사용할 수 있습니다. 참고로 우리는 다음을 사용합니다:
 
-- `max_length` to set the maximum length (here 100)
-- `truncation="only_second"` to truncate the context (which is in the second position) when the question with its context is too long
-- `stride` to set the number of overlapping tokens between two successive chunks (here 50)
-- `return_overflowing_tokens=True` to let the tokenizer know we want the overflowing tokens
+- 최대 길이를 설정하는 `max_length`(여기서는 100)
+- 컨텍스트가 포함된 질문이 너무 긴 경우 컨텍스트(두 번째 위치에 있음)를 자르려면 `truncation="only_second"`
+- 두 개의 연속 청크 사이에 겹치는 토큰 수를 설정하는 `stride`(여기서는 50)
+- `return_overflowing_tokens=True` - 토크나이저에게 오버플로우 토큰을 원한다는 사실을 알립니다.
 
 ```py
 inputs = tokenizer(
@@ -215,9 +217,9 @@ for ids in inputs["input_ids"]:
 '[CLS] To whom did the Virgin Mary allegedly appear in 1858 in Lourdes France? [SEP]. It is a replica of the grotto at Lourdes, France where the Virgin Mary reputedly appeared to Saint Bernadette Soubirous in 1858. At the end of the main drive ( and in a direct line that connects through 3 statues and the Gold Dome ), is a simple, modern stone statue of Mary. [SEP]'
 ```
 
-As we can see, our example has been in split into four inputs, each of them containing the question and some part of the context. Note that the answer to the question ("Bernadette Soubirous") only appears in the third and last inputs, so by dealing with long contexts in this way we will create some training examples where the answer is not included in the context. For those examples, the labels will be `start_position = end_position = 0` (so we predict the `[CLS]` token). We will also set those labels in the unfortunate case where the answer has been truncated so that we only have the start (or end) of it. For the examples where the answer is fully in the context, the labels will be the index of the token where the answer starts and the index of the token where the answer ends.
+보시다시피, 우리의 예는 4개의 입력으로 분할되어 있으며 각 입력에는 질문과 컨텍스트의 일부가 포함되어 있습니다. 질문에 대한 답변("Bernadette Soubirous")은 세 번째 및 마지막 입력에만 나타나므로 이러한 방식으로 긴 컨텍스트를 처리하여 답변이 컨텍스트에 포함되지 않는 몇 가지 훈련 예제를 만들 것입니다. 이러한 예의 경우 라벨은 `start_position = end_position = 0`이 됩니다(따라서 `[CLS]` 토큰을 예측합니다). 또한 불행하게도 답변이 잘려 답변의 시작(또는 끝)만 알 수 있도록 해당 라벨을 설정할 것입니다. 답변이 컨텍스트에 완전히 포함된 예의 경우 라벨은 답변이 시작되는 토큰의 인덱스와 답변이 끝나는 토큰의 인덱스가 됩니다.
 
-The dataset provides us with the start character of the answer in the context, and by adding the length of the answer, we can find the end character in the context. To map those to token indices, we will need to use the offset mappings we studied in [Chapter 6](/course/chapter6/4). We can have our tokenizer return these by passing along `return_offsets_mapping=True`:
+데이터세트는 문맥 내 답변의 시작 문자를 제공하며, 답변의 길이를 추가하여 문맥 내 끝 문자를 찾을 수 있습니다. 이를 토큰 인덱스에 매핑하려면 [6장](/course/chapter6/4)에서 연구한 오프셋 매핑을 사용해야 합니다. `return_offsets_mapping=True`를 전달하여 토크나이저가 이를 반환하도록 할 수 있습니다.
 
 ```py
 inputs = tokenizer(
@@ -236,7 +238,7 @@ inputs.keys()
 dict_keys(['input_ids', 'token_type_ids', 'attention_mask', 'offset_mapping', 'overflow_to_sample_mapping'])
 ```
 
-As we can see, we get back the usual input IDs, token type IDs, and attention mask, as well as the offset mapping we required and an extra key, `overflow_to_sample_mapping`. The corresponding value will be of use to us when we tokenize several texts at the same time (which we should do to benefit from the fact that our tokenizer is backed by Rust). Since one sample can give several features, it maps each feature to the example it originated from. Because here we only tokenized one example, we get a list of `0`s:
+보시다시피, 우리는 일반적인 입력 ID, 토큰 유형 ID 및 주의 마스크는 물론 필요한 오프셋 매핑과 추가 키 `overflow_to_sample_mapping`을 가져옵니다. 해당 값은 여러 텍스트를 동시에 토큰화할 때 유용할 것입니다(토큰나이저가 Rust의 지원을 받는다는 사실을 활용하려면 이렇게 해야 합니다). 하나의 샘플이 여러 기능을 제공할 수 있으므로 각 기능을 원래 예제에 매핑합니다. 여기서는 하나의 예시만 토큰화했기 때문에 '0' 목록을 얻습니다.
 
 ```py
 inputs["overflow_to_sample_mapping"]
@@ -246,7 +248,7 @@ inputs["overflow_to_sample_mapping"]
 [0, 0, 0, 0]
 ```
 
-But if we tokenize more examples, this will become more useful:
+그러나 더 많은 예시를 토큰화하면 이는 더욱 유용해질 것입니다.
 
 ```py
 inputs = tokenizer(
@@ -268,16 +270,16 @@ print(f"Here is where each comes from: {inputs['overflow_to_sample_mapping']}.")
 'Here is where each comes from: [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3].'
 ```
 
-As we can see, the first three examples (at indices 2, 3, and 4 in the training set) each gave four features and the last example (at index 5 in the training set) gave 7 features.
+보시다시피, 처음 세 가지 예(훈련 세트의 인덱스 2, 3, 4)는 각각 4개의 특성을 제공하고 마지막 예(훈련 세트의 인덱스 5)는 7개의 특성을 제공합니다.
 
-This information will be useful to map each feature we get to its corresponding label. As mentioned earlier, those labels are:
+이 정보는 우리가 얻은 각 기능을 해당 레이블에 매핑하는 데 유용합니다. 앞서 언급했듯이 해당 라벨은 다음과 같습니다.
 
-- `(0, 0)` if the answer is not in the corresponding span of the context
-- `(start_position, end_position)` if the answer is in the corresponding span of the context, with `start_position` being the index of the token (in the input IDs) at the start of the answer and `end_position` being the index of the token (in the input IDs) where the answer ends
+- 응답이 컨텍스트의 해당 범위에 없는 경우 `(0, 0)`
+- 답변이 컨텍스트의 해당 범위에 있는 경우 `(start_position, end_position)`, `start_position`은 답변 시작 시 토큰의 인덱스(입력 ID에서)이고 `end_position`은 답변이 끝나는 토큰(입력 ID에 있음)
 
-To determine which of these is the case and, if relevant, the positions of the tokens, we first find the indices that start and end the context in the input IDs. We could use the token type IDs to do this, but since those do not necessarily exist for all models (DistilBERT does not require them, for instance), we'll instead use the `sequence_ids()` method of the `BatchEncoding` our tokenizer returns. 
+이들 중 어떤 경우인지, 그리고 해당되는 경우 토큰의 위치를 결정하기 위해 먼저 입력 ID에서 컨텍스트를 시작하고 끝내는 인덱스를 찾습니다. 이를 위해 토큰 유형 ID를 사용할 수 있지만 모든 모델에 반드시 존재하는 것은 아니므로(예를 들어 DistilBERT에서는 이를 요구하지 않음) 대신 `BatchEncoding`의 `sequence_ids()` 메서드를 사용합니다. 토크나이저가 반환됩니다.
 
-Once we have those token indices, we look at the corresponding offsets, which are tuples of two integers representing the span of characters inside the original context. We can thus detect if the chunk of the context in this feature starts after the answer or ends before the answer begins (in which case the label is `(0, 0)`). If that's not the case, we loop to find the first and last token of the answer:
+토큰 인덱스가 있으면 원래 컨텍스트 내의 문자 범위를 나타내는 두 정수의 튜플인 해당 오프셋을 살펴봅니다. 따라서 우리는 이 기능의 컨텍스트 덩어리가 답변 이후에 시작하는지 아니면 답변이 시작되기 전에 끝나는지 감지할 수 있습니다(이 경우 라벨은 '(0, 0)'입니다). 그렇지 않은 경우 루프를 통해 답변의 첫 번째 토큰과 마지막 토큰을 찾습니다.
 
 ```py
 answers = raw_datasets["train"][2:6]["answers"]
@@ -324,7 +326,7 @@ start_positions, end_positions
  [85, 53, 21, 0, 0, 70, 33, 0, 40, 0, 0, 0, 68, 35, 0, 0, 0, 0, 0])
 ```
 
-Let's take a look at a few results to verify that our approach is correct. For the first feature we find `(83, 85)` as labels, so let's compare the theoretical answer with the decoded span of tokens from 83 to 85 (inclusive):
+우리의 접근 방식이 올바른지 확인하기 위해 몇 가지 결과를 살펴보겠습니다. 첫 번째 기능의 경우 `(83, 85)`를 레이블로 찾으므로 이론적 답변을 83에서 85(포함)까지 디코딩된 토큰 범위와 비교해 보겠습니다.
 
 ```py
 idx = 0
@@ -342,7 +344,7 @@ print(f"Theoretical answer: {answer}, labels give: {labeled_answer}")
 'Theoretical answer: the Main Building, labels give: the Main Building'
 ```
 
-So that's a match! Now let's check index 4, where we set the labels to `(0, 0)`, which means the answer is not in the context chunk of that feature:
+그래서 그것은 일치입니다! 이제 인덱스 4를 확인해 보겠습니다. 여기서 레이블을 '(0, 0)'으로 설정했습니다. 이는 답변이 해당 기능의 컨텍스트 청크에 없음을 의미합니다.
 
 ```py
 idx = 4
@@ -357,15 +359,14 @@ print(f"Theoretical answer: {answer}, decoded example: {decoded_example}")
 'Theoretical answer: a Marian place of prayer and reflection, decoded example: [CLS] What is the Grotto at Notre Dame? [SEP] Architecturally, the school has a Catholic character. Atop the Main Building\'s gold dome is a golden statue of the Virgin Mary. Immediately in front of the Main Building and facing it, is a copper statue of Christ with arms upraised with the legend " Venite Ad Me Omnes ". Next to the Main Building is the Basilica of the Sacred Heart. Immediately behind the basilica is the Grot [SEP]'
 ```
 
-Indeed, we don't see the answer inside the context.
+실제로 우리는 컨텍스트 내부에서 답을 볼 수 없습니다.
 
 <Tip>
 
-✏️ **Your turn!** When using the XLNet architecture, padding is applied on the left and the question and context are switched. Adapt all the code we just saw to the XLNet architecture (and add `padding=True`). Be aware that the `[CLS]` token may not be at the 0 position with padding applied.
-
+✏️ **당신 차례!** XLNet 아키텍처를 사용할 때 왼쪽에 패딩이 적용되고 질문과 컨텍스트가 전환됩니다. 방금 본 모든 코드를 XLNet 아키텍처에 적용하고 `padding=True`를 추가합니다. 패딩이 적용된 경우 `[CLS]` 토큰이 0 위치에 있지 않을 수 있다는 점에 유의하세요.
 </Tip>
 
-Now that we have seen step by step how to preprocess our training data, we can group it in a function we will apply on the whole training dataset. We'll pad every feature to the maximum length we set, as most of the contexts will be long (and the corresponding samples will be split into several features), so there is no real benefit to applying dynamic padding here:
+이제 학습 데이터를 전처리하는 방법을 단계별로 살펴보았으므로 이를 전체 학습 데이터 세트에 적용할 함수로 그룹화할 수 있습니다. 대부분의 컨텍스트는 길기 때문에(해당 샘플은 여러 기능으로 분할되므로) 모든 기능을 설정한 최대 길이로 채울 것이므로 여기에 동적 패딩을 적용해도 실질적인 이점은 없습니다.
 
 ```py
 max_length = 384
@@ -428,9 +429,9 @@ def preprocess_training_examples(examples):
     return inputs
 ```
 
-Note that we defined two constants to determine the maximum length used as well as the length of the sliding window, and that we added a tiny bit of cleanup before tokenizing: some of the questions in the SQuAD dataset have extra spaces at the beginning and the end that don't add anything (and take up space when being tokenized if you use a model like RoBERTa), so we removed those extra spaces.
+사용되는 최대 길이와 슬라이딩 윈도우의 길이를 결정하기 위해 두 개의 상수를 정의했으며 토큰화하기 전에 약간의 정리를 추가했습니다. SQuAD 데이터 세트의 일부 질문에는 시작 부분과 끝 부분에 추가 공백이 있습니다. 아무것도 추가하지 않고(RoBERTa와 같은 모델을 사용하는 경우 토큰화할 때 공간을 차지하므로) 추가 공간을 제거했습니다.
 
-To apply this function to the whole training set, we use the `Dataset.map()` method with the `batched=True` flag. It's necessary here as we are changing the length of the dataset (since one example can give several training features):
+이 함수를 전체 훈련 세트에 적용하기 위해 `batched=True` 플래그와 함께 `Dataset.map()` 메서드를 사용합니다. 데이터 세트의 길이를 변경하므로 여기서는 필요합니다(하나의 예가 여러 훈련 기능을 제공할 수 있으므로).
 
 ```py
 train_dataset = raw_datasets["train"].map(
@@ -445,13 +446,13 @@ len(raw_datasets["train"]), len(train_dataset)
 (87599, 88729)
 ```
 
-As we can see, the preprocessing added roughly 1,000 features. Our training set is now ready to be used -- let's dig into the preprocessing of the validation set!
+보시다시피 전처리를 통해 대략 1,000개의 기능이 추가되었습니다. 이제 훈련 세트를 사용할 준비가 되었습니다. 검증 세트의 전처리를 자세히 살펴보겠습니다!
 
-### Processing the validation data[[processing-the-validation-data]]
+### 검증 데이터 처리[[processing-the-validation-data]]
 
-Preprocessing the validation data will be slightly easier as we don't need to generate labels (unless we want to compute a validation loss, but that number won't really help us understand how good the model is). The real joy will be to interpret the predictions of the model into spans of the original context. For this, we will just need to store both the offset mappings and some way to match each created feature to the original example it comes from. Since there is an ID column in the original dataset, we'll use that ID.
+검증 데이터를 전처리하는 것은 레이블을 생성할 필요가 없기 때문에 약간 더 쉬울 것입니다(검증 손실을 계산하고 싶지 않은 한, 그 숫자는 모델이 얼마나 좋은지 이해하는 데 실제로 도움이 되지 않습니다). 진정한 즐거움은 모델의 예측을 원래 맥락의 범위로 해석하는 것입니다. 이를 위해 오프셋 매핑과 생성된 각 기능을 원본 예제와 일치시키는 방법을 모두 저장하면 됩니다. 원본 데이터세트에 ID 열이 있으므로 해당 ID를 사용하겠습니다.
 
-The only thing we'll add here is a tiny bit of cleanup of the offset mappings. They will contain offsets for the question and the context, but once we're in the post-processing stage we won't have any way to know which part of the input IDs corresponded to the context and which part was the question (the `sequence_ids()` method we used is available for the output of the tokenizer only). So, we'll set the offsets corresponding to the question to `None`:
+여기에 추가할 유일한 것은 오프셋 매핑을 약간 정리하는 것입니다. 여기에는 질문과 컨텍스트에 대한 오프셋이 포함되지만 일단 사후 처리 단계에 들어가면 입력 ID의 어느 부분이 컨텍스트에 해당하고 어느 부분이 질문인지 알 수 없습니다(` 우리가 사용한 시퀀스_ids()` 메서드는 토크나이저의 출력에만 사용할 수 있습니다. 따라서 질문에 해당하는 오프셋을 `None`으로 설정하겠습니다.
 
 ```py
 def preprocess_validation_examples(examples):
@@ -484,7 +485,7 @@ def preprocess_validation_examples(examples):
     return inputs
 ```
 
-We can apply this function on the whole validation dataset like before:
+이전과 같이 전체 검증 데이터세트에 이 함수를 적용할 수 있습니다.
 
 ```py
 validation_dataset = raw_datasets["validation"].map(
@@ -499,25 +500,25 @@ len(raw_datasets["validation"]), len(validation_dataset)
 (10570, 10822)
 ```
 
-In this case we've only added a couple of hundred samples, so it appears the contexts in the validation dataset are a bit shorter.
+이 경우에는 몇 백 개의 샘플만 추가했기 때문에 검증 데이터 세트의 컨텍스트가 약간 더 짧은 것으로 보입니다.
 
-Now that we have preprocessed all the data, we can get to the training. 
+이제 모든 데이터를 전처리했으므로 훈련을 진행할 수 있습니다.
 
 {#if fw === 'pt'}
 
-## Fine-tuning the model with the `Trainer` API[[fine-tuning-the-model-with-the-trainer-api]]
+## `Trainer` API를 사용하여 모델 미세 조정[[fine-tuning-the-model-with-the-trainer-api]]
 
-The training code for this example will look a lot like the code in the previous sections -- the hardest thing will be to write the `compute_metrics()` function. Since we padded all the samples to the maximum length we set, there is no data collator to define, so this metric computation is really the only thing we have to worry about. The difficult part will be to post-process the model predictions into spans of text in the original examples; once we have done that, the metric from the 🤗 Datasets library will do most of the work for us.
+이 예제의 학습 코드는 이전 섹션의 코드와 매우 비슷해 보입니다. 가장 어려운 점은 `compute_metrics()` 함수를 작성하는 것입니다. 우리가 설정한 최대 길이까지 모든 샘플을 채웠기 때문에 정의할 데이터 콜레이터가 없으므로 이 메트릭 계산은 실제로 우리가 걱정해야 할 유일한 것입니다. 어려운 부분은 모델 예측을 원본 예제의 텍스트 범위로 후처리하는 것입니다. 이 작업을 수행하면 🤗 데이터 세트 라이브러리의 측정항목이 대부분의 작업을 수행합니다.
 
 {:else}
 
-## Fine-tuning the model with Keras[[fine-tuning-the-model-with-keras]]
+## Keras로 모델 미세 조정[[fine-tuning-the-model-with-keras]]
 
-The training code for this example will look a lot like the code in the previous sections, but computing the metrics will be uniquely challenging. Since we padded all the samples to the maximum length we set, there is no data collator to define, so this metric computation is really the only thing we have to worry about. The hard part will be to post-process the model predictions into spans of text in the original examples; once we have done that, the metric from the 🤗 Datasets library will do most of the work for us.
+이 예제의 학습 코드는 이전 섹션의 코드와 매우 비슷해 보이지만 측정항목을 계산하는 것은 매우 어렵습니다. 우리가 설정한 최대 길이까지 모든 샘플을 채웠기 때문에 정의할 데이터 콜레이터가 없으므로 이 메트릭 계산은 실제로 우리가 걱정해야 할 유일한 것입니다. 어려운 부분은 모델 예측을 원본 예제의 텍스트 범위로 후처리하는 것입니다. 이 작업을 수행하면 🤗 데이터 세트 라이브러리의 측정항목이 대부분의 작업을 수행합니다.
 
 {/if}
 
-### Post-processing[[post-processing]]
+### 후처리[[post-processing]]
 
 {#if fw === 'pt'}
 
@@ -529,16 +530,16 @@ The training code for this example will look a lot like the code in the previous
 
 {/if}
 
-The model will output logits for the start and end positions of the answer in the input IDs, as we saw during our exploration of the [`question-answering` pipeline](/course/chapter6/3b). The post-processing step will be similar to what we did there, so here's a quick reminder of the actions we took:
+모델은 [`질문-답변` 파이프라인](/course/chapter6/3b)을 탐색하는 동안 본 것처럼 입력 ID에서 답변의 시작 및 끝 위치에 대한 로짓을 출력합니다. 사후 처리 단계는 우리가 수행한 작업과 유사하므로 다음은 우리가 수행한 작업을 간략히 알려드립니다.
 
-- We masked the start and end logits corresponding to tokens outside of the context.
-- We then converted the start and end logits into probabilities using a softmax.
-- We attributed a score to each `(start_token, end_token)` pair by taking the product of the corresponding two probabilities.
-- We looked for the pair with the maximum score that yielded a valid answer (e.g., a `start_token` lower than `end_token`).
+- 컨텍스트 외부의 토큰에 해당하는 시작 및 종료 로짓을 마스킹했습니다.
+- 그런 다음 소프트맥스를 사용하여 시작 및 종료 로짓을 확률로 변환했습니다.
+- 해당 두 확률의 곱을 취하여 각 '(start_token, end_token)' 쌍에 점수를 부여했습니다.
+- 유효한 답변을 제공하는 최대 점수를 가진 쌍을 찾았습니다(예: 'end_token'보다 낮은 'start_token').
 
-Here we will change this process slightly because we don't need to compute actual scores (just the predicted answer). This means we can skip the softmax step. To go faster, we also won't score all the possible `(start_token, end_token)` pairs, but only the ones corresponding to the highest `n_best` logits (with `n_best=20`). Since we will skip the softmax, those scores will be logit scores, and will be obtained by taking the sum of the start and end logits (instead of the product, because of the rule \\(\log(ab) = \log(a) + \log(b)\\)).
+여기서는 실제 점수를 계산할 필요가 없기 때문에(예상 답변만) 이 프로세스를 약간 변경하겠습니다. 이는 소프트맥스 단계를 건너뛸 수 있음을 의미합니다. 더 빠르게 진행하기 위해 가능한 모든 `(start_token, end_token)` 쌍의 점수를 매기는 것이 아니라 가장 높은 `n_best` 로짓(`n_best=20` 사용)에 해당하는 쌍만 점수를 매깁니다. 소프트맥스를 건너뛸 것이므로 해당 점수는 로짓 점수가 되며 \\(\log(ab) = \log( 규칙 때문에 곱 대신에 시작 및 끝 로짓의 합을 취하여 얻습니다. a) + \log(b)\\)).
 
-To demonstrate all of this, we will need some kind of predictions. Since we have not trained our model yet, we are going to use the default model for the QA pipeline to generate some predictions on a small part of the validation set. We can use the same processing function as before; because it relies on the global constant `tokenizer`, we just have to change that object to the tokenizer of the model we want to use temporarily:
+이 모든 것을 입증하려면 일종의 예측이 필요합니다. 아직 모델을 훈련하지 않았으므로 QA 파이프라인의 기본 모델을 사용하여 검증 세트의 작은 부분에 대한 일부 예측을 생성하겠습니다. 이전과 동일한 처리 기능을 사용할 수 있습니다. 전역 상수 `tokenizer`에 의존하기 때문에 해당 객체를 임시로 사용하려는 모델의 토크나이저로 변경하면 됩니다.
 
 ```python
 small_eval_set = raw_datasets["validation"].select(range(100))
@@ -552,13 +553,13 @@ eval_set = small_eval_set.map(
 )
 ```
 
-Now that the preprocessing is done, we change the tokenizer back to the one we originally picked:
+이제 전처리가 완료되었으므로 토크나이저를 원래 선택한 것으로 다시 변경합니다.
 
 ```python
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 ```
 
-We then remove the columns of our `eval_set` that are not expected by the model, build a batch with all of that small validation set, and pass it through the model. If a GPU is available, we use it to go faster:
+그런 다음 모델에서 예상하지 않은 'eval_set' 열을 제거하고 작은 검증 세트가 모두 포함된 배치를 구축한 후 모델을 통해 전달합니다. GPU를 사용할 수 있는 경우 이를 사용하여 더 빠르게 진행합니다.
 
 {#if fw === 'pt'}
 
@@ -579,7 +580,7 @@ with torch.no_grad():
     outputs = trained_model(**batch)
 ```
 
-Since the `Trainer` will give us predictions as NumPy arrays, we grab the start and end logits and convert them to that format:
+`Trainer`는 NumPy 배열로 예측을 제공하므로 시작 및 끝 로짓을 가져와 해당 형식으로 변환합니다.
 
 ```python
 start_logits = outputs.start_logits.cpu().numpy()
@@ -601,7 +602,7 @@ trained_model = TFAutoModelForQuestionAnswering.from_pretrained(trained_checkpoi
 outputs = trained_model(**batch)
 ```
 
-For ease of experimentation, let's convert these outputs to NumPy arrays:
+실험의 편의를 위해 이러한 출력을 NumPy 배열로 변환하겠습니다.
 
 ```python
 start_logits = outputs.start_logits.numpy()
@@ -610,7 +611,7 @@ end_logits = outputs.end_logits.numpy()
 
 {/if}
 
-Now, we need to find the predicted answer for each example in our `small_eval_set`. One example may have been split into several features in `eval_set`, so the first step is to map each example in `small_eval_set` to the corresponding features in `eval_set`:
+이제 `small_eval_set`에서 각 예시에 대한 예측 답을 찾아야 합니다. 하나의 예가 `eval_set`에서 여러 기능으로 분할되었을 수 있으므로 첫 번째 단계는 `small_eval_set`의 각 예를 `eval_set`의 해당 기능에 매핑하는 것입니다.
 
 ```python
 import collections
@@ -620,13 +621,13 @@ for idx, feature in enumerate(eval_set):
     example_to_features[feature["example_id"]].append(idx)
 ```
 
-With this in hand, we can really get to work by looping through all the examples and, for each example, through all the associated features. As we said before, we'll look at the logit scores for the `n_best` start logits and end logits, excluding positions that give:
+이를 통해 우리는 모든 예제를 반복하고 각 예제에 대해 관련된 모든 기능을 통해 실제로 작업을 시작할 수 있습니다. 이전에 말했듯이 다음을 제공하는 위치를 제외하고 'n_best' 시작 로짓과 끝 로짓에 대한 로짓 점수를 살펴보겠습니다.
 
-- An answer that wouldn't be inside the context
-- An answer with negative length
-- An answer that is too long (we limit the possibilities at `max_answer_length=30`)
+- 문맥에 맞지 않는 답변
+- 음수 길이의 답변
+- 답변이 너무 깁니다(`max_answer_length=30`에서 가능성을 제한합니다).
 
-Once we have all the scored possible answers for one example, we just pick the one with the best logit score:
+한 가지 예에 대해 점수가 매겨진 가능한 답변을 모두 얻은 후에는 가장 좋은 로짓 점수를 가진 답변을 선택합니다.
 
 ```python
 import numpy as np
@@ -670,7 +671,7 @@ for example in small_eval_set:
     predicted_answers.append({"id": example_id, "prediction_text": best_answer["text"]})
 ```
 
-The final format of the predicted answers is the one that will be expected by the metric we will use. As usual, we can load it with the help of the 🤗 Evaluate library:
+예측 답변의 최종 형식은 우리가 사용할 측정항목에서 예상되는 형식입니다. 평소와 마찬가지로 🤗 Evaluate 라이브러리를 사용하여 로드할 수 있습니다.
 
 ```python
 import evaluate
@@ -678,7 +679,7 @@ import evaluate
 metric = evaluate.load("squad")
 ```
 
-This metric expects the predicted answers in the format we saw above (a list of dictionaries with one key for the ID of the example and one key for the predicted text) and the theoretical answers in the format below (a list of dictionaries with one key for the ID of the example and one key for the possible answers):
+이 측정항목은 위에서 본 형식(예제 ID에 대해 하나의 키와 예측 텍스트에 대해 하나의 키가 있는 사전 목록)의 예측 답변과 아래 형식(하나의 키가 있는 사전 목록)의 이론적 답변을 기대합니다. 예제의 ID 및 가능한 답변에 대한 키 하나):
 
 ```python
 theoretical_answers = [
@@ -686,7 +687,7 @@ theoretical_answers = [
 ]
 ```
 
-We can now check that we get sensible results by looking at the first element of both lists:
+이제 두 목록의 첫 번째 요소를 살펴봄으로써 합리적인 결과를 얻을 수 있는지 확인할 수 있습니다.
 
 ```python
 print(predicted_answers[0])
@@ -698,7 +699,7 @@ print(theoretical_answers[0])
 {'id': '56be4db0acb8001400a502ec', 'answers': {'text': ['Denver Broncos', 'Denver Broncos', 'Denver Broncos'], 'answer_start': [177, 177, 177]}}
 ```
 
-Not too bad! Now let's have a look at the score the metric gives us:
+나쁘지 않아! 이제 측정항목이 제공하는 점수를 살펴보겠습니다.
 
 ```python
 metric.compute(predictions=predicted_answers, references=theoretical_answers)
@@ -708,17 +709,18 @@ metric.compute(predictions=predicted_answers, references=theoretical_answers)
 {'exact_match': 83.0, 'f1': 88.25}
 ```
 
-Again, that's rather good considering that according to [its paper](https://arxiv.org/abs/1910.01108v2) DistilBERT fine-tuned on SQuAD obtains 79.1 and 86.9 for those scores on the whole dataset.
 
+1,220 / 5,000
+다시 말하지만, [해당 논문](https://arxiv.org/abs/1910.01108v2)에 따르면 SQuAD에서 미세 조정된 DistilBERT가 전체 데이터세트에서 해당 점수에 대해 79.1과 86.9를 얻는다는 점을 고려하면 다소 좋습니다.
 {#if fw === 'pt'}
 
-Now let's put everything we just did in a `compute_metrics()` function that we will use in the `Trainer`. Normally, that `compute_metrics()` function only receives a tuple `eval_preds` with logits and labels. Here we will need a bit more, as we have to look in the dataset of features for the offset and in the dataset of examples for the original contexts, so we won't be able to use this function to get regular evaluation results during training. We will only use it at the end of training to check the results.
+이제 방금 수행한 모든 작업을 `Trainer`에서 사용할 `compute_metrics()` 함수에 넣어 보겠습니다. 일반적으로 `compute_metrics()` 함수는 로지트와 라벨이 포함된 `eval_preds` 튜플만 받습니다. 여기에서는 오프셋에 대한 기능 데이터세트와 원래 컨텍스트에 대한 예제 데이터세트를 살펴봐야 하므로 조금 더 필요하므로 훈련 중에 정기적인 평가 결과를 얻기 위해 이 함수를 사용할 수 없습니다. . 훈련이 끝난 후에 결과를 확인하기 위해서만 사용할 것입니다.
 
-The `compute_metrics()` function groups the same steps as before; we just add a small check in case we don't come up with any valid answers (in which case we predict an empty string).
+`compute_metrics()` 함수는 이전과 동일한 단계를 그룹화합니다. 유효한 답변이 나오지 않는 경우를 대비해 작은 검사만 추가합니다(이 경우 빈 문자열을 예측합니다).
 
 {:else}
 
-Now let's put everything we just did in a `compute_metrics()` function that we will use after training our model. We will need to pass a bit more than just the output logits, as we have to look in the dataset of features for the offset and in the dataset of examples for the original contexts:
+이제 방금 수행한 모든 작업을 모델 학습 후 사용할 `compute_metrics()` 함수에 넣어 보겠습니다. 오프셋에 대한 기능 데이터세트와 원래 컨텍스트에 대한 예제 데이터세트에서 살펴봐야 하므로 출력 로짓보다 조금 더 많은 것을 전달해야 합니다.
 
 {/if}
 
@@ -776,7 +778,7 @@ def compute_metrics(start_logits, end_logits, features, examples):
     return metric.compute(predictions=predicted_answers, references=theoretical_answers)
 ```
 
-We can check it works on our predictions:
+우리의 예측대로 작동하는지 확인할 수 있습니다.
 
 ```python
 compute_metrics(start_logits, end_logits, eval_set, small_eval_set)
@@ -786,13 +788,13 @@ compute_metrics(start_logits, end_logits, eval_set, small_eval_set)
 {'exact_match': 83.0, 'f1': 88.25}
 ```
 
-Looking good! Now let's use this to fine-tune our model.
+좋아 보여! 이제 이를 사용하여 모델을 미세 조정해 보겠습니다.
 
-### Fine-tuning the model[[fine-tuning-the-model]]
+### 모델 미세 조정[[fine-tuning-the-model]]
 
 {#if fw === 'pt'}
 
-We are now ready to train our model. Let's create it first, using the `AutoModelForQuestionAnswering` class like before:
+이제 모델을 훈련할 준비가 되었습니다. 이전과 같이 `AutoModelForQuestionAnswering` 클래스를 사용하여 먼저 생성해 보겠습니다.
 
 ```python
 model = AutoModelForQuestionAnswering.from_pretrained(model_checkpoint)
@@ -800,7 +802,7 @@ model = AutoModelForQuestionAnswering.from_pretrained(model_checkpoint)
 
 {:else}
 
-We are now ready to train our model. Let's create it first, using the `TFAutoModelForQuestionAnswering` class like before:
+이제 모델을 훈련할 준비가 되었습니다. 이전과 같이 `TFAutoModelForQuestionAnswering` 클래스를 사용하여 먼저 생성해 보겠습니다.
 
 ```python
 model = TFAutoModelForQuestionAnswering.from_pretrained(model_checkpoint)
@@ -808,9 +810,9 @@ model = TFAutoModelForQuestionAnswering.from_pretrained(model_checkpoint)
 
 {/if}
 
-As usual, we get a warning that some weights are not used (the ones from the pretraining head) and some others are initialized randomly (the ones for the question answering head). You should be used to this by now, but that means this model is not ready to be used just yet and needs fine-tuning -- good thing we're about to do that!
+평소와 같이 일부 가중치(사전 훈련 헤드의 가중치)가 사용되지 않고 일부 가중치(질문 응답 헤드의 가중치)가 무작위로 초기화된다는 경고가 표시됩니다. 이제 익숙해졌을 것입니다. 그러나 이는 이 모델이 아직 사용될 준비가 되지 않았으며 미세 조정이 필요하다는 것을 의미합니다. 이제 곧 그렇게 하게 되어 다행입니다!
 
-To be able to push our model to the Hub, we'll need to log in to Hugging Face. If you're running this code in a notebook, you can do so with the following utility function, which displays a widget where you can enter your login credentials:
+모델을 허브에 푸시하려면 Hugging Face에 로그인해야 합니다. 노트북에서 이 코드를 실행하는 경우 로그인 자격 증명을 입력할 수 있는 위젯을 표시하는 다음 유틸리티 함수를 사용하여 실행할 수 있습니다.
 
 ```python
 from huggingface_hub import notebook_login
@@ -818,7 +820,7 @@ from huggingface_hub import notebook_login
 notebook_login()
 ```
 
-If you aren't working in a notebook, just type the following line in your terminal:
+노트북에서 작업하지 않는 경우 터미널에 다음 줄을 입력하세요.
 
 ```bash
 huggingface-cli login
@@ -826,11 +828,11 @@ huggingface-cli login
 
 {#if fw === 'pt'}
 
-Once this is done, we can define our `TrainingArguments`. As we said when we defined our function to compute the metric, we won't be able to have a regular evaluation loop because of the signature of the `compute_metrics()` function. We could write our own subclass of `Trainer` to do this (an approach you can find in the [question answering example script](https://github.com/huggingface/transformers/blob/master/examples/pytorch/question-answering/trainer_qa.py)), but that's a bit too long for this section. Instead, we will only evaluate the model at the end of training here and show you how to do a regular evaluation in "A custom training loop" below.
+이 작업이 완료되면 'TrainingArguments'를 정의할 수 있습니다. 메트릭을 계산하는 함수를 정의할 때 말했듯이 `compute_metrics()` 함수의 서명으로 인해 일반적인 평가 루프를 가질 수 없습니다. 이를 위해 'Trainer'의 자체 하위 클래스를 작성할 수 있습니다([질문 답변 예제 스크립트](https://github.com/huggingface/transformers/blob/master/examples/pytorch/question-에서 찾을 수 있는 접근 방식). Answering/trainer_qa.py)), 하지만 이 섹션에서는 내용이 너무 깁니다. 대신 여기에서는 훈련이 끝날 때만 모델을 평가하고 아래의 "사용자 정의 훈련 루프"에서 정기적인 평가를 수행하는 방법을 보여줍니다.
 
-This is really where the `Trainer` API shows its limits and the 🤗 Accelerate library shines: customizing the class to a specific use case can be painful, but tweaking a fully exposed training loop is easy.
+이것은 실제로 `Trainer` API가 한계를 보여주고 🤗 Accelerate 라이브러리가 빛을 발하는 부분입니다. 특정 사용 사례에 맞게 클래스를 사용자 정의하는 것은 어려울 수 있지만 완전히 노출된 훈련 루프를 조정하는 것은 쉽습니다.
 
-Let's take a look at our `TrainingArguments`:
+'TrainingArguments'를 살펴보겠습니다.
 
 ```python
 from transformers import TrainingArguments
@@ -847,11 +849,11 @@ args = TrainingArguments(
 )
 ```
 
-We've seen most of these before: we set some hyperparameters (like the learning rate, the number of epochs we train for, and some weight decay) and indicate that we want to save the model at the end of every epoch, skip evaluation, and upload our results to the Model Hub. We also enable mixed-precision training with `fp16=True`, as it can speed up the training nicely on a recent GPU.
+우리는 이전에 이들 중 대부분을 본 적이 있습니다. 몇 가지 하이퍼 매개변수(예: 학습 속도, 학습하는 에포크 수, 일부 가중치 감소)를 설정하고 모든 에포크가 끝날 때 모델을 저장하고 싶다고 표시하고 평가를 건너뜁니다. , 결과를 모델 허브에 업로드하세요. 또한 'fp16=True'를 사용하여 혼합 정밀도 교육을 활성화합니다. 최신 GPU에서 교육 속도를 크게 높일 수 있기 때문입니다.
 
 {:else}
 
-Now that's done, we can create our TF Datasets. We can use the simple default data collator this time:
+이제 완료되었으므로 TF 데이터세트를 만들 수 있습니다. 이번에는 간단한 기본 데이터 조합기를 사용할 수 있습니다.
 
 ```python
 from transformers import DefaultDataCollator
@@ -859,7 +861,7 @@ from transformers import DefaultDataCollator
 data_collator = DefaultDataCollator(return_tensors="tf")
 ```
 
-And now we create the datasets as usual.
+이제 평소대로 데이터세트를 생성합니다.
 
 ```python
 tf_train_dataset = model.prepare_tf_dataset(
@@ -876,7 +878,7 @@ tf_eval_dataset = model.prepare_tf_dataset(
 )
 ```
 
-Next, we set up our training hyperparameters and compile our model:
+다음으로 훈련 하이퍼파라미터를 설정하고 모델을 컴파일합니다.
 
 ```python
 from transformers import create_optimizer
@@ -900,21 +902,21 @@ model.compile(optimizer=optimizer)
 tf.keras.mixed_precision.set_global_policy("mixed_float16")
 ```
 
-Finally, we're ready to train with `model.fit()`. We use a `PushToHubCallback` to upload the model to the Hub after each epoch.
+마지막으로 `model.fit()`을 사용하여 훈련할 준비가 되었습니다. 각 에포크 후에 'PushToHubCallback'을 사용하여 모델을 허브에 업로드합니다.
 
 {/if}
 
-By default, the repository used will be in your namespace and named after the output directory you set, so in our case it will be in `"sgugger/bert-finetuned-squad"`. We can override this by passing a `hub_model_id`; for instance, to push the model to the `huggingface_course` organization we used `hub_model_id="huggingface_course/bert-finetuned-squad"` (which is the model we linked to at the beginning of this section).
+기본적으로 사용되는 저장소는 네임스페이스에 있고 설정한 출력 디렉터리의 이름을 따서 명명됩니다. 따라서 우리의 경우에는 `"sgugger/bert-finetuned-squad"`에 있습니다. `hub_model_id`를 전달하여 이를 재정의할 수 있습니다. 예를 들어 모델을 `huggingface_course` 조직에 푸시하기 위해 `hub_model_id="huggingface_course/bert-finetuned-squad"`(이 섹션 시작 부분에서 연결한 모델)를 사용했습니다.
 
 {#if fw === 'pt'}
 
 <Tip>
 
-💡 If the output directory you are using exists, it needs to be a local clone of the repository you want to push to (so set a new name if you get an error when defining your `Trainer`).
+💡 사용 중인 출력 디렉터리가 존재하는 경우 푸시하려는 저장소의 로컬 복제본이어야 합니다(따라서 `Trainer`를 정의할 때 오류가 발생하면 새 이름을 설정하세요).
 
 </Tip>
 
-Finally, we just pass everything to the `Trainer` class and launch the training:
+마지막으로 모든 것을 `Trainer` 클래스에 전달하고 훈련을 시작합니다.
 
 ```python
 from transformers import Trainer
@@ -942,11 +944,11 @@ model.fit(tf_train_dataset, callbacks=[callback], epochs=num_train_epochs)
 
 {/if}
 
-Note that while the training happens, each time the model is saved (here, every epoch) it is uploaded to the Hub in the background. This way, you will be able to to resume your training on another machine if necessary. The whole training takes a while (a little over an hour on a Titan RTX), so you can grab a coffee or reread some of the parts of the course that you've found more challenging while it proceeds. Also note that as soon as the first epoch is finished, you will see some weights uploaded to the Hub and you can start playing with your model on its page.
+훈련이 진행되는 동안 모델이 저장될 때마다(여기서는 매 에포크마다) 백그라운드에서 허브에 업로드됩니다. 이렇게 하면 필요한 경우 다른 장비에서 훈련을 재개할 수 있습니다. 전체 훈련에는 시간이 걸리므로(Titan RTX의 경우 1시간 남짓) 커피를 마시거나 진행하는 동안 더 어려웠던 과정의 일부 부분을 다시 읽을 수 있습니다. 또한 첫 번째 에포크가 완료되자마자 허브에 일부 가중치가 업로드된 것을 볼 수 있으며 해당 페이지에서 모델을 가지고 놀 수 있습니다.
 
 {#if fw === 'pt'}
 
-Once the training is complete, we can finally evaluate our model (and pray we didn't spend all that compute time on nothing). The `predict()` method of the `Trainer` will return a tuple where the first elements will be the predictions of the model (here a pair with the start and end logits). We send this to our `compute_metrics()` function:
+훈련이 완료되면 마침내 모델을 평가할 수 있습니다(그리고 계산 시간을 아무것도 낭비하지 않기를 바랍니다). 'Trainer'의 'predict()' 메서드는 첫 번째 요소가 모델의 예측이 되는 튜플을 반환합니다(여기서는 시작 및 종료 로짓과 쌍). 이것을 `compute_metrics()` 함수로 보냅니다:
 
 ```python
 predictions, _, _ = trainer.predict(validation_dataset)
@@ -956,7 +958,7 @@ compute_metrics(start_logits, end_logits, validation_dataset, raw_datasets["vali
 
 {:else}
 
-Once the training is complete, we can finally evaluate our model (and pray we didn't spend all that compute time on nothing). The `predict()` method of our `model` will take care of getting predictions, and since we did all the hard work of defining a `compute_metrics()` function earlier, we can get our results in a single line:
+훈련이 완료되면 마침내 모델을 평가할 수 있습니다(그리고 계산 시간을 아무것도 낭비하지 않기를 바랍니다). `model`의 `predict()` 메서드는 예측을 가져오는 작업을 담당하며 앞서 `compute_metrics()` 함수를 정의하는 모든 노력을 기울였으므로 결과를 한 줄로 얻을 수 있습니다.
 
 ```python
 predictions = model.predict(tf_eval_dataset)
@@ -974,45 +976,45 @@ compute_metrics(
 {'exact_match': 81.18259224219489, 'f1': 88.67381321905516}
 ```
 
-Great! As a comparison, the baseline scores reported in the BERT article for this model are 80.8 and 88.5, so we're right where we should be.
+엄청난! 비교해 보면, 이 모델에 대해 BERT 기사에 보고된 기준 점수는 80.8과 88.5이므로 우리가 있어야 할 위치에 있습니다.
 
 {#if fw === 'pt'}
 
-Finally, we use the `push_to_hub()` method to make sure we upload the latest version of the model:
+마지막으로 `push_to_hub()` 메서드를 사용하여 모델의 최신 버전을 업로드합니다.
 
 ```py
 trainer.push_to_hub(commit_message="Training complete")
 ```
 
-This returns the URL of the commit it just did, if you want to inspect it:
+검사하려는 경우 방금 수행한 커밋의 URL을 반환합니다.
 
 ```python out
 'https://huggingface.co/sgugger/bert-finetuned-squad/commit/9dcee1fbc25946a6ed4bb32efb1bd71d5fa90b68'
 ```
 
-The `Trainer` also drafts a model card with all the evaluation results and uploads it.
+`Trainer`도 모든 평가 결과를 담은 모델 카드 초안을 작성해 업로드한다.
 
 {/if}
 
-At this stage, you can use the inference widget on the Model Hub to test the model and share it with your friends, family, and favorite pets. You have successfully fine-tuned a model on a question answering task -- congratulations!
+이 단계에서는 모델 허브의 추론 위젯을 사용하여 모델을 테스트하고 친구, 가족 및 좋아하는 애완동물과 공유할 수 있습니다. 질문 응답 작업에서 모델을 성공적으로 미세 조정했습니다. 축하합니다!
 
 <Tip>
 
-✏️ **Your turn!** Try another model architecture to see if it performs better on this task!
+✏️ **당신 차례입니다!** 다른 모델 아키텍처를 사용해 이 작업에서 더 나은 성능을 발휘하는지 확인하세요!
 
 </Tip>
 
 {#if fw === 'pt'}
 
-If you want to dive a bit more deeply into the training loop, we will now show you how to do the same thing using 🤗  Accelerate.
+훈련 루프에 대해 좀 더 깊이 알고 싶다면 이제 🤗 Accelerate를 사용하여 동일한 작업을 수행하는 방법을 보여드리겠습니다.
 
-## A custom training loop[[a-custom-training-loop]]
+## 맞춤형 훈련 루프[[a-custom-training-loop]]
 
-Let's now have a look at the full training loop, so you can easily customize the parts you need. It will look a lot like the training loop in [Chapter 3](/course/chapter3/4), with the exception of the evaluation loop. We will be able to evaluate the model regularly since we're not constrained by the `Trainer` class anymore.
+이제 전체 훈련 루프를 살펴보고 필요한 부분을 쉽게 사용자 정의할 수 있습니다. 평가 루프를 제외하면 [3장](/course/chapter3/4)의 훈련 루프와 매우 비슷해 보입니다. 더 이상 `Trainer` 클래스의 제약을 받지 않으므로 모델을 정기적으로 평가할 수 있습니다.
 
-### Preparing everything for training[[preparing-everything-for-training]]
+### 훈련을 위한 모든 준비[[preparing-everything-for-training]]
 
-First we need to build the `DataLoader`s from our datasets. We set the format of those datasets to `"torch"`, and remove the columns in the validation set that are not used by the model. Then, we can use the `default_data_collator` provided by Transformers as a `collate_fn` and shuffle the training set, but not the validation set:
+먼저 데이터세트에서 `DataLoader`를 빌드해야 합니다. 해당 데이터 세트의 형식을 `"torch"`로 설정하고 모델에서 사용하지 않는 검증 세트의 열을 제거합니다. 그런 다음 Transformers에서 제공하는 `default_data_collator`를 `collate_fn`으로 사용하고 훈련 세트를 섞을 수 있지만 검증 세트는 섞을 수 없습니다.
 
 ```py
 from torch.utils.data import DataLoader
@@ -1033,13 +1035,13 @@ eval_dataloader = DataLoader(
 )
 ```
 
-Next we reinstantiate our model, to make sure we're not continuing the fine-tuning from before but starting from the BERT pretrained model again:
+다음으로 모델을 다시 인스턴스화하여 이전부터 미세 조정을 계속하지 않고 BERT 사전 학습 모델에서 다시 시작하는지 확인합니다.
 
 ```py
 model = AutoModelForQuestionAnswering.from_pretrained(model_checkpoint)
 ```
 
-Then we will need an optimizer. As usual we use the classic `AdamW`, which is like Adam, but with a fix in the way weight decay is applied:
+그런 다음 최적화 프로그램이 필요합니다. 평소와 같이 우리는 Adam과 비슷하지만 가중치 감소가 적용되는 방식을 수정한 고전적인 'AdamW'를 사용합니다.
 
 ```py
 from torch.optim import AdamW
@@ -1047,7 +1049,7 @@ from torch.optim import AdamW
 optimizer = AdamW(model.parameters(), lr=2e-5)
 ```
 
-Once we have all those objects, we can send them to the `accelerator.prepare()` method. Remember that if you want to train on TPUs in a Colab notebook, you will need to move all of this code into a training function, and that shouldn't execute any cell that instantiates an `Accelerator`. We can force mixed-precision training by passing `fp16=True` to the `Accelerator` (or, if you are executing the code as a script, just make sure to fill in the 🤗 Accelerate `config` appropriately).
+해당 개체가 모두 있으면 `accelerator.prepare()` 메서드로 보낼 수 있습니다. Colab 노트북에서 TPU를 학습시키려면 이 코드를 모두 학습 함수로 이동해야 하며 '가속기'를 인스턴스화하는 셀을 실행해서는 안 됩니다. `fp16=True`를 `Accelerator`에 전달하여 혼합 정밀도 훈련을 강제할 수 있습니다(또는 코드를 스크립트로 실행하는 경우 🤗 Accelerate `config`를 적절하게 입력했는지 확인하세요).
 
 ```py
 from accelerate import Accelerator
@@ -1058,7 +1060,7 @@ model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
 )
 ```
 
-As you should know from the previous sections, we can only use the `train_dataloader` length to compute the number of training steps after it has gone through the `accelerator.prepare()` method. We use the same linear schedule as in the previous sections:
+이전 섹션에서 알 수 있듯이, `accelerator.prepare()` 메서드를 거친 후 훈련 단계 수를 계산하기 위해 `train_dataloader` 길이만 사용할 수 있습니다. 이전 섹션과 동일한 선형 일정을 사용합니다.
 
 ```py
 from transformers import get_scheduler
@@ -1075,7 +1077,7 @@ lr_scheduler = get_scheduler(
 )
 ```
 
-To push our model to the Hub, we will need to create a `Repository` object in a working folder. First log in to the Hugging Face Hub, if you're not logged in already. We'll determine the repository name from the model ID we want to give our model (feel free to replace the `repo_name` with your own choice; it just needs to contain your username, which is what the function `get_full_repo_name()` does):
+모델을 허브에 푸시하려면 작업 폴더에 `Repository` 개체를 만들어야 합니다. 아직 로그인하지 않았다면 먼저 Hugging Face Hub에 로그인하세요. 모델에 제공하려는 모델 ID에서 저장소 이름을 결정할 것입니다(`repo_name`을 원하는 것으로 자유롭게 바꾸십시오. 사용자 이름만 포함하면 됩니다. 이는 `get_full_repo_name()` 함수가 수행하는 작업입니다. ):
 
 ```py
 from huggingface_hub import Repository, get_full_repo_name
@@ -1089,24 +1091,23 @@ repo_name
 'sgugger/bert-finetuned-squad-accelerate'
 ```
 
-Then we can clone that repository in a local folder. If it already exists, this local folder should be a clone of the repository we are working with:
+그런 다음 해당 저장소를 로컬 폴더에 복제할 수 있습니다. 이미 존재하는 경우 이 로컬 폴더는 작업 중인 저장소의 복제본이어야 합니다.
 
 ```py
 output_dir = "bert-finetuned-squad-accelerate"
 repo = Repository(output_dir, clone_from=repo_name)
 ```
 
-We can now upload anything we save in `output_dir` by calling the `repo.push_to_hub()` method. This will help us upload the intermediate models at the end of each epoch.
+이제 `repo.push_to_hub()` 메서드를 호출하여 `output_dir`에 저장한 모든 항목을 업로드할 수 있습니다. 이는 각 시대가 끝날 때 중간 모델을 업로드하는 데 도움이 됩니다.
+## 훈련 루프[[training-loop]]
 
-## Training loop[[training-loop]]
+이제 전체 훈련 루프를 작성할 준비가 되었습니다. 훈련 진행 방식을 따르기 위해 진행률 표시줄을 정의한 후 루프는 세 부분으로 구성됩니다.
 
-We are now ready to write the full training loop. After defining a progress bar to follow how training goes, the loop has three parts:
+- 'train_dataloader'에 대한 고전적인 반복인 훈련 자체는 모델을 통한 정방향 전달, 그런 다음 역방향 전달 및 최적화 단계입니다.
+- 'start_logits' 및 'end_logits'에 대한 모든 값을 NumPy 배열로 변환하기 전에 수집하는 평가입니다. 평가 루프가 완료되면 모든 결과를 연결합니다. '가속기'가 각 프로세스에서 동일한 수의 예제를 갖도록 하기 위해 끝에 몇 개의 샘플을 추가했을 수 있으므로 잘라야 합니다.
+- 저장 및 업로드. 먼저 모델과 토크나이저를 저장한 다음 `repo.push_to_hub()`를 호출합니다. 이전과 마찬가지로 `blocking=False` 인수를 사용하여 🤗 Hub 라이브러리에 비동기 프로세스를 푸시하도록 지시합니다. 이렇게 하면 훈련이 정상적으로 계속되고 이 (긴) 명령이 백그라운드에서 실행됩니다.
 
-- The training in itself, which is the classic iteration over the `train_dataloader`, forward pass through the model, then backward pass and optimizer step.
-- The evaluation, in which we gather all the values for `start_logits` and `end_logits` before converting them to NumPy arrays. Once the evaluation loop is finished, we concatenate all the results. Note that we need to truncate because the `Accelerator` may have added a few samples at the end to ensure we have the same number of examples in each process.
-- Saving and uploading, where we first save the model and the tokenizer, then call `repo.push_to_hub()`. As we did before, we use the argument `blocking=False` to tell the 🤗 Hub library to push in an asynchronous process. This way, training continues normally and this (long) instruction is executed in the background.
-
-Here's the complete code for the training loop:
+훈련 루프의 전체 코드는 다음과 같습니다.
 
 ```py
 from tqdm.auto import tqdm
@@ -1160,7 +1161,7 @@ for epoch in range(num_train_epochs):
         )
 ```
 
-In case this is the first time you're seeing a model saved with 🤗 Accelerate, let's take a moment to inspect the three lines of code that go with it:
+🤗 Accelerate로 저장된 모델을 처음으로 보는 경우, 잠시 시간을 내어 해당 모델과 관련된 세 줄의 코드를 살펴보겠습니다.
 
 ```py
 accelerator.wait_for_everyone()
@@ -1174,10 +1175,9 @@ Once this is done, you should have a model that produces results pretty similar 
 
 {/if}
 
-## Using the fine-tuned model[[using-the-fine-tuned-model]]
+## 미세 조정된 모델 사용[[using-the-fine-tuned-model]]
 
-We've already shown you how you can use the model we fine-tuned on the Model Hub with the inference widget. To use it locally in a `pipeline`, you just have to specify the model identifier:
-
+추론 위젯을 통해 모델 허브에서 미세 조정한 모델을 사용하는 방법을 이미 보여드렸습니다. `파이프라인`에서 로컬로 사용하려면 모델 식별자만 지정하면 됩니다.
 ```py
 from transformers import pipeline
 
@@ -1200,4 +1200,4 @@ question_answerer(question=question, context=context)
  'answer': 'Jax, PyTorch and TensorFlow'}
 ```
 
-Great! Our model is working as well as the default one for this pipeline!
+엄청난! 우리 모델은 이 파이프라인의 기본 모델과 마찬가지로 작동하고 있습니다!
